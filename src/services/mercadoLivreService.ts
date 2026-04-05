@@ -113,9 +113,9 @@ export async function fetchTop20Deals(
   _accessToken?: string,
   category = 'eletronicos'
 ): Promise<ProdutoML[]> {
-  // Chamada pública para o Mercado Livre via Proxy (Sem Token para evitar 403 se o app for restrito)
-  // Utilizamos filters para garantir relevância
-  const path = `/sites/MLB/search?q=${encodeURIComponent(category)}&sort=relevance&limit=20&shipping_cost=free&status=active`
+  // Chamada pública via Proxy
+  const query = category === 'eletronicos' ? 'tecnologia' : category
+  const path = `/sites/MLB/search?q=${encodeURIComponent(query)}&limit=20`
   const response = await fetch(`/api/ml-proxy?path=${encodeURIComponent(path)}`)
 
   if (!response.ok) throw new Error('Erro ao buscar ofertas do dia')

@@ -14,7 +14,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'User-Agent': 'TorresBot/1.0 (https://torres-bot.vercel.app)'
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Origin': 'https://www.mercadolivre.com.br',
+      'Referer': 'https://www.mercadolivre.com.br/'
     }
 
     if (token) {
