@@ -25,6 +25,9 @@ export async function enviarMensagemOferta(params: EvolutionSendMediaParams): Pr
   // Limpa a URL se tiver barra no final
   const baseUrl = url.endsWith('/') ? url.slice(0, -1) : url
   
+  // Força HTTPS na imagem do Mercado Livre (essencial para evitar erro 400/CORS na API)
+  const secureMediaUrl = mediaUrl.replace('http://', 'https://')
+
   const endpoint = `${baseUrl}/message/sendMedia/${instanceName}`
 
   const response = await fetch(endpoint, {
@@ -35,10 +38,12 @@ export async function enviarMensagemOferta(params: EvolutionSendMediaParams): Pr
     },
     body: JSON.stringify({
       number: remoteJid,
-      media: mediaUrl,
-      mediaType: 'image',
+      mediatype: 'image',
+      mimetype: 'image/jpeg',
       caption: caption,
-      delay: 1200 // Pequeno delay humano
+      media: secureMediaUrl,
+      fileName: 'oferta-produto.jpg',
+      delay: 1200
     })
   })
 
