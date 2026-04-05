@@ -31,6 +31,11 @@ const configPadrao: Configuracoes = {
   evoApiKey: '',
   evoInstanceName: '',
   evoGroupJid: '',
+  /** Automação de Afiliado */
+  mlAffiliateId: '82693087',
+  mlAffiliateTag: 'kleber-san',
+  modoAfiliado: true,
+  intervaloPostagem: 30,
 }
 
 export const useSettingsStore = create<SettingsState>()(

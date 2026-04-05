@@ -13,6 +13,7 @@ import Library from '@/pages/Library'
 import History from '@/pages/History'
 import Settings from '@/pages/Settings'
 import MLCallback from '@/pages/MLCallback'
+import OfferFactory from '@/pages/OfferFactory'
 
 export default function App() {
   const [sidebarAberta, setSidebarAberta] = useState(false)
@@ -36,6 +37,7 @@ export default function App() {
               <Route path="/produtos" element={<Products />} />
               <Route path="/nova-oferta" element={<NewOffer />} />
               <Route path="/biblioteca" element={<Library />} />
+              <Route path="/fabrica" element={<OfferFactory />} />
               <Route path="/historico" element={<History />} />
               <Route path="/configuracoes" element={<Settings />} />
               <Route path="/ml-callback" element={<MLCallback />} />

@@ -99,6 +99,11 @@ export interface Configuracoes {
   evoApiKey?: string
   evoInstanceName?: string
   evoGroupJid?: string
+  /** Configurações de Afiliado & Automação */
+  mlAffiliateId?: string
+  mlAffiliateTag?: string
+  modoAfiliado?: boolean
+  intervaloPostagem?: number
 }
 
 /** Props do componente de filtros */

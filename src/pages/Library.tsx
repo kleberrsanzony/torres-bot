@@ -1,9 +1,6 @@
-/**
- * Biblioteca — Listagem completa de ofertas
- * Filtros, ações de CRUD, favoritos.
- */
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search,
   Filter,
@@ -19,6 +16,8 @@ import {
   MoreVertical,
   X,
   SlidersHorizontal,
+  Clock,
+  Zap,
 } from 'lucide-react'
 import { useOfferStore } from '@/stores/offerStore'
 import { useHistoryStore } from '@/stores/historyStore'
@@ -51,6 +50,7 @@ export default function Library() {
   }
 
   function handleExcluir(id: string, nome: string) {
+    if (!confirm(`Deseja realmente excluir a oferta "${nome}"?`)) return
     excluirOferta(id)
     adicionarRegistro({
       ofertaId: id,
@@ -85,223 +85,203 @@ export default function Library() {
     setMenuAberto(null)
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: { opacity: 1, x: 0 }
+  }
+
   return (
-    <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-            Biblioteca de Ofertas
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+      className="space-y-6 max-w-[1200px] mx-auto pb-20"
+    >
+      {/* Header Premium */}
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black text-[var(--color-text-primary)]">
+            Sua <span className="text-[var(--color-accent)]">Biblioteca</span> Deep
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-            {ofertas.length} oferta{ofertas.length !== 1 ? 's' : ''}
+          <p className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-widest leading-none">
+            {ofertas.length} Ofertas de impacto registradas
           </p>
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setMostrarFiltros(!mostrarFiltros)}
             className={`
-              flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-all
-              ${
-                mostrarFiltros || temFiltros
-                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
-                  : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
-              }
+              flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-bold border transition-all
+              ${mostrarFiltros || temFiltros 
+                ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]' 
+                : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]'}
             `}
           >
             <SlidersHorizontal className="w-4 h-4" />
-            Filtros
+            Filtrar
           </button>
           <button
             onClick={() => navigate('/nova-oferta')}
-            className="
-              flex items-center gap-2 px-4 py-2 rounded-lg text-sm
-              bg-[var(--color-accent)] text-[var(--color-text-inverse)]
-              font-bold hover:bg-[var(--color-accent-light)] transition-all
-            "
+            className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-black bg-[var(--color-gradient-gold)] text-black shadow-lg hover:scale-105 active:scale-95 transition-all"
           >
-            + Nova Oferta
+            <Zap className="w-4 h-4 fill-black" />
+            Nova Oferta
           </button>
         </div>
       </div>
 
-      {/* Filtros */}
-      {mostrarFiltros && (
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 animate-slide-in-up">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Filtros</h3>
-            {temFiltros && (
-              <button onClick={limparFiltros} className="text-xs text-[var(--color-accent)] hover:underline flex items-center gap-1">
-                <X className="w-3 h-3" /> Limpar
-              </button>
-            )}
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" />
-              <input
-                type="text"
-                value={filtros.busca}
-                onChange={(e) => setFiltros({ busca: e.target.value })}
-                placeholder="Buscar oferta..."
-                className="w-full pl-9 pr-3 py-2 rounded-lg text-sm bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] focus:outline-none focus:border-[var(--color-accent)] transition-all"
-              />
-            </div>
-            <select
-              value={filtros.status}
-              onChange={(e) => setFiltros({ status: e.target.value as StatusOferta | 'todos' })}
-              className="w-full px-3 py-2 rounded-lg text-sm bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)] transition-all"
-            >
-              <option value="todos">Todos os status</option>
-              <option value="rascunho">Rascunho</option>
-              <option value="pronta">Pronta</option>
-              <option value="enviada">Enviada</option>
-              <option value="arquivada">Arquivada</option>
-            </select>
-          </div>
-        </div>
-      )}
-
-      {/* Lista */}
-      {ofertas.length === 0 ? (
-        <div className="text-center py-20">
-          <FileText className="w-16 h-16 text-[var(--color-border)] mx-auto mb-4" />
-          <p className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
-            Nenhuma oferta encontrada
-          </p>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-            {temFiltros ? 'Tente ajustar os filtros.' : 'Crie sua primeira oferta para começar a vender!'}
-          </p>
-          <button
-            onClick={() => navigate('/nova-oferta')}
-            className="text-sm text-[var(--color-accent)] font-medium hover:underline"
+      {/* Painel de Filtros Glass */}
+      <AnimatePresence>
+        {mostrarFiltros && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
           >
-            Criar oferta →
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {ofertas.map((oferta) => {
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/50 backdrop-blur-sm p-6 space-y-4 mb-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Refinar Biblioteca</h4>
+                {temFiltros && (
+                  <button onClick={limparFiltros} className="text-[10px] font-black uppercase text-[var(--color-accent)] border-b border-[var(--color-accent)]">Resetar</button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
+                  <input
+                    type="text"
+                    value={filtros.busca}
+                    onChange={(e) => setFiltros({ busca: e.target.value })}
+                    placeholder="Buscar oferta..."
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-sm text-white focus:border-[var(--color-accent)] transition-all"
+                  />
+                </div>
+                <select
+                  value={filtros.status}
+                  onChange={(e) => setFiltros({ status: e.target.value as StatusOferta | 'todos' })}
+                  className="w-full px-4 py-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-sm text-white focus:border-[var(--color-accent)] transition-all"
+                >
+                  <option value="todos">Status: Todos</option>
+                  <option value="rascunho">Rascunho</option>
+                  <option value="pronta">Pronta</option>
+                  <option value="enviada">Enviada</option>
+                  <option value="arquivada">Arquivada</option>
+                </select>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Lista de Cards Premium */}
+      <div className="grid gap-4">
+        {ofertas.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
+             <div className="w-20 h-20 rounded-3xl bg-[var(--color-surface)] border border-dashed border-[var(--color-border)] flex items-center justify-center">
+                <FileText className="w-10 h-10 text-[var(--color-text-muted)]" />
+             </div>
+             <p className="text-sm font-bold text-[var(--color-text-secondary)]">Sua biblioteca está um deserto...<br/>Que tal criar algo grande hoje?</p>
+             <button onClick={() => navigate('/nova-oferta')} className="text-[var(--color-accent)] font-black text-xs uppercase tracking-widest hover:underline underline-offset-8 transition-all">Começar Agora</button>
+          </div>
+        ) : (
+          ofertas.map((oferta) => {
             const desconto = calcularDesconto(oferta.precoDe, oferta.precoPor)
             return (
-              <div
+              <motion.div
                 key={oferta.id}
-                className="
-                  rounded-xl border border-[var(--color-border)]
-                  bg-[var(--color-surface)] p-4
-                  hover:border-[var(--color-border-light)]
-                  transition-all
-                "
+                variants={itemVariants}
+                whileHover={{ x: 4 }}
+                className="group relative flex flex-col md:flex-row gap-5 p-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-accent)] hover:shadow-[0_0_30px_rgba(212,175,55,0.05)] transition-all duration-300"
               >
-                <div className="flex gap-4">
-                  {/* Imagem */}
+                {/* Thumb */}
+                <div className="relative w-full md:w-32 aspect-square md:aspect-auto md:h-32 rounded-xl overflow-hidden bg-black/40 flex-shrink-0">
                   {oferta.imagem && (
                     <img
                       src={oferta.imagem}
                       alt={oferta.nomeProduto}
-                      className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
                   )}
+                  {desconto > 0 && (
+                    <div className="absolute top-2 left-2 bg-[var(--color-accent)] text-black text-[9px] font-black px-1.5 py-0.5 rounded-md">
+                      {desconto}% OFF
+                    </div>
+                  )}
+                </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="text-sm font-semibold text-[var(--color-text-primary)] line-clamp-1">
+                {/* Body */}
+                <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <h4 className="text-base font-black text-[var(--color-text-primary)] group-hover:text-[var(--color-accent)] transition-colors line-clamp-1">
                           {oferta.nomeProduto}
                         </h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="price-old text-xs">
-                            {formatarPreco(oferta.precoDe)}
-                          </span>
-                          <span className="text-sm font-bold text-[var(--color-accent)]">
-                            {formatarPreco(oferta.precoPor)}
-                          </span>
-                          {desconto > 0 && (
-                            <span className="text-[10px] text-[var(--color-accent)] font-semibold">
-                              -{desconto}%
-                            </span>
-                          )}
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl font-black text-white">{formatarPreco(oferta.precoPor)}</span>
+                          <span className="text-xs line-through text-[var(--color-text-muted)] font-bold">{formatarPreco(oferta.precoDe)}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span
-                          className={`badge ${
-                            oferta.status === 'enviada' ? 'badge--active'
-                            : oferta.status === 'pronta' ? 'badge--active'
-                            : oferta.status === 'arquivada' ? 'badge--closed'
-                            : 'badge--paused'
-                          }`}
+                      
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => alternarFavorita(oferta.id)}
+                          className={`p-2 rounded-xl transition-all ${oferta.favorita ? 'bg-amber-500/10 text-amber-500' : 'bg-[var(--color-bg-primary)] text-[var(--color-text-muted)] hover:text-white'}`}
                         >
+                          <Star className={`w-5 h-5 ${oferta.favorita ? 'fill-current' : ''}`} />
+                        </button>
+                        <span className={`
+                           px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest
+                           ${oferta.status === 'enviada' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-gray-500/10 text-gray-400'}
+                        `}>
                           {oferta.status}
                         </span>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Ações */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={() => handleCopiar(oferta.copyGerada)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-all"
-                        title="Copiar copy"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                        Copiar
-                      </button>
-                      <button
-                        onClick={() => oferta.numeroWhatsApp && abrirWhatsApp(oferta.numeroWhatsApp, oferta.copyGerada)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs text-[var(--color-whatsapp)] hover:bg-[rgba(37,211,102,0.1)] transition-all"
-                        title="Abrir no WhatsApp"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        WhatsApp
-                      </button>
-                      <button
-                        onClick={() => alternarFavorita(oferta.id)}
-                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-all ${
-                          oferta.favorita
-                            ? 'text-[var(--color-warning)] bg-[var(--color-warning-soft)]'
-                            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
-                        }`}
-                        title={oferta.favorita ? 'Remover favorito' : 'Favoritar'}
-                      >
-                        <Heart className={`w-3.5 h-3.5 ${oferta.favorita ? 'fill-current' : ''}`} />
-                      </button>
-                      <button
-                        onClick={() => handleDuplicar(oferta.id)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-all"
-                        title="Duplicar"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                        Duplicar
-                      </button>
-                      <button
-                        onClick={() => handleArquivar(oferta.id, oferta.nomeProduto)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-all"
-                        title="Arquivar"
-                      >
-                        <Archive className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleExcluir(oferta.id, oferta.nomeProduto)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs text-[var(--color-danger)] hover:bg-[var(--color-danger-soft)] transition-all"
-                        title="Excluir"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                  {/* Actions Bar */}
+                  <div className="mt-4 pt-4 border-t border-[var(--color-border)] flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => handleCopiar(oferta.copyGerada)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--color-bg-primary)] text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] border border-transparent transition-all"
+                    >
+                      <Copy className="w-3 h-3" /> Copiar
+                    </button>
+                    <button
+                      onClick={() => oferta.numeroWhatsApp && abrirWhatsApp(oferta.numeroWhatsApp, oferta.copyGerada)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[#25d366]/10 text-[#25d366] hover:bg-[#25d366] hover:text-black transition-all"
+                    >
+                      <MessageSquare className="w-3 h-3" /> WhatsApp
+                    </button>
+                    
+                    <div className="flex-1" />
 
-                      <span className="text-[10px] text-[var(--color-text-secondary)] ml-auto">
-                        {formatarData(oferta.dataCriacao)}
-                      </span>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <button onClick={() => navigate('/nova-oferta', { state: { produto: { id: oferta.produtoId, titulo: oferta.nomeProduto, sku: oferta.sku, preco: oferta.precoDe, precoPromocional: oferta.precoPor, imagemPrincipal: oferta.imagem } as any } })} className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors"><Edit3 className="w-4 h-4"/></button>
+                       <button onClick={() => handleDuplicar(oferta.id)} className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors"><Copy className="w-4 h-4"/></button>
+                       <button onClick={() => handleArquivar(oferta.id, oferta.nomeProduto)} className="p-2 text-[var(--color-text-muted)] hover:text-white transition-colors"><Archive className="w-4 h-4"/></button>
+                       <button onClick={() => handleExcluir(oferta.id, oferta.nomeProduto)} className="p-2 text-red-500/50 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4"/></button>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold text-[var(--color-text-muted)] uppercase">
+                       <Clock className="w-3 h-3"/>
+                       {formatarData(oferta.dataCriacao)}
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             )
-          })}
-        </div>
-      )}
-    </div>
+          })
+        )}
+      </div>
+    </motion.div>
   )
 }

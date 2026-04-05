@@ -1,10 +1,7 @@
-/**
- * Página de Callback do Mercado Livre
- * Captura o code da URL e o troca por tokens.
- */
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Loader2, CheckCircle, AlertCircle, ArrowLeft, Zap } from 'lucide-react'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useProductStore } from '@/stores/productStore'
 import { trocarCodigoPorToken, buscarInfoVendedor } from '@/services/mercadoLivreService'
@@ -22,7 +19,7 @@ export default function MLCallback() {
     const code = searchParams.get('code')
     if (!code) {
       setStatus('erro')
-      setMensagem('Código de autorização não encontrado na URL.')
+      setMensagem('Código de autorização não encontrado.')
       return
     }
 
@@ -34,13 +31,9 @@ export default function MLCallback() {
           redirectUri: mlRedirectUri || ''
         }
         
-        // 1. Trocar código pelo token
         const authData = await trocarCodigoPorToken(code!, config)
-        
-        // 2. Buscar informações do vendedor
         const sellerInfo = await buscarInfoVendedor(authData.access_token)
         
-        // 3. Salvar tokens e dados do vendedor na store
         atualizarConfig({
           mlConectado: true,
           mlToken: authData.access_token,
@@ -50,14 +43,11 @@ export default function MLCallback() {
           mlUltimaSincronizacao: new Date().toISOString()
         })
 
-        // 4. Iniciar Sincronização Automática (conforme solicitado pelo usuário)
         setStatus('sucesso')
-        setMensagem('Conectado com sucesso! Sincronizando seus produtos...')
+        setMensagem('Conexão estabelecida! Sincronizando seu acervo...')
         
-        // Chamar sync real
         await sincronizarProdutosReais()
 
-        // 5. Redirecionar para configurações após um delay
         setTimeout(() => {
           navigate('/configuracoes')
         }, 2000)
@@ -65,7 +55,7 @@ export default function MLCallback() {
       } catch (error: any) {
         console.error('[ML Callback] Erro:', error)
         setStatus('erro')
-        setMensagem(error.message || 'Falha ao autenticar com Mercado Livre.')
+        setMensagem(error.message || 'Falha na autenticação.')
       }
     }
 
@@ -73,33 +63,57 @@ export default function MLCallback() {
   }, [])
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 animate-fade-in">
-      <div className={`p-4 rounded-full ${
-        status === 'processando' ? 'bg-[var(--color-accent-soft)]' :
-        status === 'sucesso' ? 'bg-[var(--color-success-soft)]' :
-        'bg-[var(--color-danger-soft)]'
-      }`}>
-        {status === 'processando' && <Loader2 className="w-12 h-12 text-[var(--color-accent)] animate-spin" />}
-        {status === 'sucesso' && <CheckCircle className="w-12 h-12 text-[var(--color-accent)]" />}
-        {status === 'erro' && <AlertCircle className="w-12 h-12 text-[var(--color-danger)]" />}
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center justify-center min-h-[70vh] px-4"
+    >
+      <div className="relative group">
+         {/* Decor Circle */}
+         <div className={`absolute inset-0 blur-3xl opacity-20 group-hover:opacity-40 transition-opacity ${
+            status === 'processando' ? 'bg-[var(--color-accent)]' :
+            status === 'sucesso' ? 'bg-emerald-500' :
+            'bg-red-500'
+         }`} />
+         
+         <div className={`relative z-10 w-24 h-24 rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center shadow-2xl transition-all ${
+            status === 'sucesso' ? 'border-emerald-500/50' : 
+            status === 'erro' ? 'border-red-500/50' : 
+            'border-[var(--color-accent)]'
+         }`}>
+           {status === 'processando' && <Loader2 className="w-10 h-10 text-[var(--color-accent)] animate-spin" />}
+           {status === 'sucesso' && <Zap className="w-10 h-10 text-emerald-500 fill-emerald-500" />}
+           {status === 'erro' && <AlertCircle className="w-10 h-10 text-red-500" />}
+         </div>
       </div>
 
-      <div className="text-center">
-        <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-1">
-          {status === 'processando' ? 'Autenticando...' : 
-           status === 'sucesso' ? 'Sucesso!' : 'Algo deu errado'}
+      <div className="mt-8 text-center space-y-3">
+        <h2 className="text-3xl font-black text-white tracking-tight">
+          {status === 'processando' ? 'Processando <span class="text-[var(--color-accent)]">DNA</span>' : 
+           status === 'sucesso' ? 'Acesso <span class="text-emerald-500">Concedido</span>' : 'Acesso <span class="text-red-500">Negado</span>'}
         </h2>
-        <p className="text-[var(--color-text-secondary)]">{mensagem}</p>
+        <p className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-[0.2em] max-w-xs mx-auto">
+          {mensagem}
+        </p>
       </div>
+
+      {status === 'sucesso' && (
+         <motion.div 
+           initial={{ width: 0 }}
+           animate={{ width: 200 }}
+           className="h-1 bg-[var(--color-accent)] rounded-full mt-6 shadow-[0_0_15px_rgba(212,175,55,0.4)]"
+         />
+      )}
 
       {status === 'erro' && (
         <button 
           onClick={() => navigate('/configuracoes')}
-          className="mt-4 px-6 py-2 bg-[var(--color-accent)] text-white rounded-lg font-bold"
+          className="mt-10 flex items-center gap-2 px-8 py-4 bg-[var(--color-surface)] border border-[var(--color-border)] text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:border-white transition-all shadow-xl"
         >
-          Voltar para Configurações
+          <ArrowLeft className="w-4 h-4" />
+          Voltar e Revisar
         </button>
       )}
-    </div>
+    </motion.div>
   )
 }

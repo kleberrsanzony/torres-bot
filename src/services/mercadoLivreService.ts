@@ -2,6 +2,7 @@
  * Serviço de Integração Real com Mercado Livre (Via Vercel Functions Proxy)
  * Gerencia OAuth e busca de produtos reais, contornando erros de CORS.
  */
+import type { ProdutoML } from '@/types'
 
 const ML_AUTH_URL = 'https://auth.mercadolivre.com.br/authorization'
 
@@ -104,4 +105,51 @@ export async function buscarInfoVendedor(accessToken: string): Promise<any> {
 
   if (!response.ok) throw new Error('Erro ao buscar info do vendedor')
   return response.json()
+}
+/**
+ * Busca os 20 melhores "Deals" do dia (Descontos + Frete Grátis)
+ */
+export async function fetchTop20Deals(
+  accessToken: string,
+  category = 'eletronicos'
+): Promise<ProdutoML[]> {
+  const path = `/sites/MLB/search?q=${encodeURIComponent(category)}&special_promotion=all&limit=20&shipping_cost=free`
+  const response = await fetch(`/api/ml-proxy?path=${encodeURIComponent(path)}&token=${accessToken}`)
+
+  if (!response.ok) throw new Error('Erro ao buscar ofertas do dia')
+  const data = await response.json()
+  
+  return (data.results || []).map((item: any) => ({
+    id: item.id,
+    titulo: item.title,
+    preco: item.original_price || item.price,
+    precoPromocional: item.price,
+    linkAnuncio: item.permalink,
+    imagemPrincipal: item.thumbnail.replace('-I.jpg', '-O.jpg').replace('http://', 'https://'),
+    imagensSecundarias: [],
+    estoque: item.available_quantity,
+    categoria: item.category_id,
+    marca: '',
+    sku: item.id,
+    status: item.status || 'active',
+    variacoes: [],
+    dataImportacao: new Date().toISOString(),
+    vendas: item.sold_quantity || 0,
+    condicao: item.condition
+  }))
+}
+
+/**
+ * Gera um link de afiliado "Elite" para um produto
+ */
+export function generateAffiliateUrl(
+  originalUrl: string, 
+  itemId: string,
+  affId = '82693087', 
+  affTag = 'kleber-san'
+): string {
+  // O formato que funcionou no teste: mercadolivre.com.br/social/p/{ITEM_ID}?matt_tool={ID}&matt_word={TAG}
+  // Mas o link direto do produto com os parâmetros também funciona
+  const baseUrl = originalUrl.split('?')[0]
+  return `${baseUrl}?matt_tool=${affId}&matt_word=${affTag}&source=affiliate-factory`
 }

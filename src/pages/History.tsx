@@ -1,6 +1,4 @@
-/**
- * Histórico — Timeline de ações do sistema
- */
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Clock,
   FileText,
@@ -11,12 +9,14 @@ import {
   Trash2,
   Trash,
   RefreshCw,
+  Calendar,
+  Hash,
 } from 'lucide-react'
 import { useHistoryStore } from '@/stores/historyStore'
 import { formatarDataHora } from '@/lib/utils'
 import type { RegistroHistorico } from '@/types'
 
-const iconesAcao: Record<RegistroHistorico['acao'], typeof Send> = {
+const iconesAcao: Record<RegistroHistorico['acao'], any> = {
   criada: FileText,
   enviada: Send,
   editada: Edit3,
@@ -26,124 +26,142 @@ const iconesAcao: Record<RegistroHistorico['acao'], typeof Send> = {
 }
 
 const coresAcao: Record<RegistroHistorico['acao'], string> = {
-  criada: 'var(--color-accent)',
-  enviada: 'var(--color-whatsapp)',
-  editada: 'var(--color-info)',
-  duplicada: 'var(--color-warning)',
-  arquivada: 'var(--color-text-secondary)',
-  excluida: 'var(--color-danger)',
+  criada: 'text-blue-500',
+  enviada: 'text-emerald-500',
+  editada: 'text-amber-500',
+  duplicada: 'text-purple-500',
+  arquivada: 'text-slate-500',
+  excluida: 'text-red-500',
 }
 
 const labelsAcao: Record<RegistroHistorico['acao'], string> = {
-  criada: 'Oferta criada',
-  enviada: 'Enviada via WhatsApp',
-  editada: 'Oferta editada',
-  duplicada: 'Oferta duplicada',
-  arquivada: 'Oferta arquivada',
-  excluida: 'Oferta excluída',
+  criada: 'NOVA OFERTA',
+  enviada: 'DISPARO WHATSAPP',
+  editada: 'ATUALIZADO',
+  duplicada: 'CLONADO',
+  arquivada: 'ARQUIVADO',
+  excluida: 'REMOVIDO',
 }
 
 export default function History() {
   const { registros, limparHistorico } = useHistoryStore()
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: { opacity: 1, x: 0 }
+  }
+
   return (
-    <div className="space-y-5 animate-fade-in">
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      className="max-w-4xl mx-auto space-y-8 pb-20"
+    >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-            Histórico
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black text-white">
+            Linha do <span className="text-[var(--color-accent)]">Tempo</span>
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-            {registros.length} registro{registros.length !== 1 ? 's' : ''} de atividade
+          <p className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-widest leading-none">
+            {registros.length} Eventos de DNA Torres
           </p>
         </div>
+        
         {registros.length > 0 && (
           <button
-            onClick={limparHistorico}
-            className="
-              flex items-center gap-2 px-3 py-2 rounded-lg text-sm
-              border border-[var(--color-border)] text-[var(--color-text-secondary)]
-              hover:bg-[var(--color-danger-soft)] hover:text-[var(--color-danger)]
-              hover:border-[var(--color-danger)]
-              transition-all
-            "
+            onClick={() => confirm('Limpar todo o histórico?') && limparHistorico()}
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-lg"
           >
             <Trash className="w-4 h-4" />
-            Limpar
+            Limpar Registro
           </button>
         )}
       </div>
 
       {registros.length === 0 ? (
-        <div className="text-center py-20">
-          <Clock className="w-16 h-16 text-[var(--color-border)] mx-auto mb-4" />
-          <p className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
-            Nenhuma atividade registrada
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-32 bg-[var(--color-surface)]/30 backdrop-blur-md rounded-[3rem] border border-[var(--color-border)] border-dashed"
+        >
+          <Clock className="w-16 h-16 text-[var(--color-border)] mx-auto mb-6 opacity-50" />
+          <h3 className="text-xl font-black text-white mb-2">Sem Pulsação do Sistema</h3>
+          <p className="text-sm text-[var(--color-text-muted)] max-w-xs mx-auto uppercase tracking-tighter">
+            Nenhuma atividade detectada no ecossistema até o momento.
           </p>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Suas ações aparecerão aqui conforme você usa o sistema.
-          </p>
-        </div>
+        </motion.div>
       ) : (
         <div className="relative">
-          {/* Linha vertical da timeline */}
-          <div className="absolute left-5 top-0 bottom-0 w-px bg-[var(--color-border)]" />
+          {/* Linha vertical estilizada */}
+          <div className="absolute left-6 top-0 bottom-0 w-1 bg-gradient-to-b from-[var(--color-accent)]/50 via-[var(--color-border)] to-transparent rounded-full" />
 
-          <div className="space-y-4">
-            {registros.map((registro, i) => {
+          <motion.div 
+            variants={containerVariants}
+            className="space-y-6"
+          >
+            {registros.map((registro) => {
               const Icone = iconesAcao[registro.acao] || FileText
-              const cor = coresAcao[registro.acao] || 'var(--color-text-secondary)'
+              const corClass = coresAcao[registro.acao] || 'text-slate-500'
               const label = labelsAcao[registro.acao] || registro.acao
 
               return (
-                <div
+                <motion.div
                   key={registro.id}
-                  className="flex items-start gap-4 pl-1 animate-slide-in-left"
-                  style={{ animationDelay: `${Math.min(i * 0.05, 0.3)}s`, opacity: 0, animationFillMode: 'forwards' }}
+                  variants={itemVariants}
+                  className="relative flex items-start gap-8 pl-2 group"
                 >
-                  {/* Ícone */}
-                  <div
-                    className="
-                      w-10 h-10 rounded-full flex items-center justify-center
-                      flex-shrink-0 z-10 border-2
-                    "
-                    style={{
-                      background: `${cor}20`,
-                      borderColor: cor,
-                    }}
-                  >
-                    <Icone className="w-4 h-4" style={{ color: cor }} />
+                  {/* Ponto da Timeline */}
+                  <div className="relative z-10 flex-shrink-0 w-10 h-10 rounded-2xl bg-[var(--color-bg-primary)] border-2 border-[var(--color-border)] flex items-center justify-center text-white shadow-xl group-hover:border-[var(--color-accent)] transition-all">
+                    <Icone className={`w-5 h-5 ${corClass}`} />
                   </div>
 
-                  {/* Conteúdo */}
-                  <div className="flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-                    <div className="flex items-start justify-between gap-2">
+                  {/* Card do Conteúdo */}
+                  <div className="flex-1 p-6 rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-sm group-hover:bg-[var(--color-surface)] transition-all shadow-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
                       <div>
-                        <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2.5 py-1 rounded-full bg-[var(--color-bg-primary)] ${corClass} border border-current/10`}>
+                            {label}
+                          </span>
+                          <span className="text-[10px] font-bold text-[var(--color-text-muted)] flex items-center gap-1 opacity-50">
+                             <Calendar className="w-3 h-3" /> {formatarDataHora(registro.data)}
+                          </span>
+                        </div>
+                        <h4 className="text-lg font-black text-white leading-tight">
                           {registro.produtoNome}
-                        </p>
-                        <p className="text-xs mt-0.5" style={{ color: cor }}>
-                          {label}
-                        </p>
+                        </h4>
                       </div>
-                      <span className="text-[10px] text-[var(--color-text-secondary)] whitespace-nowrap">
-                        {formatarDataHora(registro.data)}
-                      </span>
+                      
+                      <div className="flex items-center gap-1 text-[var(--color-accent)]">
+                         <Hash className="w-3 h-3" />
+                         <span className="text-[10px] font-mono font-bold tracking-tighter opacity-60">ID-{registro.id.slice(0,6).toUpperCase()}</span>
+                      </div>
                     </div>
 
                     {registro.copyUsada && (
-                      <div className="mt-2 p-2 rounded-md bg-[var(--color-bg-secondary)] text-xs text-[var(--color-text-secondary)] line-clamp-3 whitespace-pre-wrap">
-                        {registro.copyUsada}
+                      <div className="relative mt-4">
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--color-accent)]/20 rounded-full" />
+                        <p className="pl-4 text-xs font-medium text-[var(--color-text-muted)] line-clamp-3 leading-relaxed whitespace-pre-wrap italic">
+                          "{registro.copyUsada}"
+                        </p>
                       </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
               )
             })}
-          </div>
+          </motion.div>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

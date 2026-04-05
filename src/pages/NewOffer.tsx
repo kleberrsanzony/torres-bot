@@ -1,9 +1,6 @@
-/**
- * Nova Oferta — Formulário completo com gerador de copy e preview
- * Auto-preenchimento ao importar produto do ML.
- */
 import { useState, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Send,
   Wand2,
@@ -13,7 +10,6 @@ import {
   Crown,
   Copy,
   ExternalLink,
-  Share2,
   Save,
   CheckCircle,
   MessageSquare,
@@ -27,7 +23,7 @@ import { useOfferStore } from '@/stores/offerStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { gerarCopy, gerarTresVersoes, encurtarCopy, maisVendedor, maisPremium } from '@/lib/copyEngine'
-import { gerarLinkWhatsApp, copiarParaClipboard, abrirWhatsApp } from '@/lib/whatsappLink'
+import { copiarParaClipboard, abrirWhatsApp } from '@/lib/whatsappLink'
 import { formatarPreco, calcularDesconto } from '@/lib/utils'
 import { enviarMensagemOferta } from '@/services/evolutionService'
 import type { ProdutoML, EstiloCopy } from '@/types'
@@ -58,10 +54,10 @@ const formularioInicial: FormularioOferta = {
   imagem: '',
 }
 
-const estilosCopy: { valor: EstiloCopy; label: string; icone: typeof Flame; descricao: string }[] = [
-  { valor: 'vendedor', label: 'Vendedor Direto', icone: Flame, descricao: 'Curto e objetivo' },
-  { valor: 'varejo', label: 'Varejo Popular', icone: Zap, descricao: 'Chamativo e promocional' },
-  { valor: 'premium', label: 'Premium', icone: Crown, descricao: 'Elegante e credível' },
+const estilosCopy: { valor: EstiloCopy; label: string; icone: any; descricao: string }[] = [
+  { valor: 'vendedor', label: 'Vendedor', icone: Flame, descricao: 'Direto' },
+  { valor: 'varejo', label: 'Varejo', icone: Zap, descricao: 'Promocional' },
+  { valor: 'premium', label: 'Elite', icone: Crown, descricao: 'Elegante' },
 ]
 
 export default function NewOffer() {
@@ -82,9 +78,7 @@ export default function NewOffer() {
   const [copiado, setCopiado] = useState(false)
   const [salvo, setSalvo] = useState(false)
   const [enviandoEvo, setEnviandoEvo] = useState(false)
-  const [mostrarPreview, setMostrarPreview] = useState(false)
 
-  /** Auto-preencher se veio de um produto */
   useEffect(() => {
     const produto = (location.state as { produto?: ProdutoML })?.produto
     if (produto) {
@@ -97,21 +91,16 @@ export default function NewOffer() {
         numeroWhatsApp: settings.numeroWhatsApp,
         linkGrupo: settings.linkGrupo,
         descricao: '',
-        urgencia: produto.estoque <= 5 ? `Apenas ${produto.estoque} unidades em estoque!` : '',
+        urgencia: produto.estoque <= 5 ? `Apenas ${produto.estoque} unidades disponíveis!` : '',
         imagem: produto.imagemPrincipal,
       })
     }
-  }, [location.state])
+  }, [location.state, settings.numeroWhatsApp, settings.linkGrupo])
 
-  /** Atualizar campo do formulário */
-  const atualizarCampo = useCallback(
-    (campo: keyof FormularioOferta, valor: string) => {
-      setForm((prev) => ({ ...prev, [campo]: valor }))
-    },
-    [],
-  )
+  const atualizarCampo = useCallback((campo: keyof FormularioOferta, valor: string) => {
+    setForm((prev) => ({ ...prev, [campo]: valor }))
+  }, [])
 
-  /** Dados formatados para o engine de copy */
   function dadosCopy() {
     return {
       nomeProduto: form.nomeProduto,
@@ -124,23 +113,18 @@ export default function NewOffer() {
     }
   }
 
-  /** Gerar copy */
   function handleGerarCopy() {
     const copy = gerarCopy(estilo, dadosCopy())
     setCopyGerada(copy)
     setTresVersoes(null)
-    setMostrarPreview(true)
   }
 
-  /** Gerar 3 versões */
   function handleGerarTresVersoes() {
     const versoes = gerarTresVersoes(dadosCopy())
     setTresVersoes(versoes)
     setCopyGerada(versoes[estilo])
-    setMostrarPreview(true)
   }
 
-  /** Copiar copy */
   async function handleCopiar() {
     const ok = await copiarParaClipboard(copyGerada)
     if (ok) {
@@ -149,19 +133,17 @@ export default function NewOffer() {
     }
   }
 
-  /** Abrir WhatsApp */
   function handleAbrirWhatsApp() {
     if (!form.numeroWhatsApp) {
-      alert('Configure o número do WhatsApp primeiro.')
-      return
+       alert('Configure o número nas Configurações.')
+       return
     }
     abrirWhatsApp(form.numeroWhatsApp, copyGerada)
   }
 
-  /** Enviar Automático via Evolution API */
   async function handleEnviarEvo() {
     if (!settings.evoUrl || !settings.evoApiKey || !settings.evoInstanceName || !settings.evoGroupJid) {
-      alert('Configure a Evolution API nas Configurações primeiro.')
+      alert('Configure a Evolution API primeiro.')
       return
     }
 
@@ -184,15 +166,14 @@ export default function NewOffer() {
         detalhes: 'Enviado via Evolution API para o grupo'
       })
 
-      alert('Oferta enviada com sucesso para o grupo!')
+      alert('Oferta disparada com sucesso!')
     } catch (error: any) {
-      alert('Erro ao enviar: ' + error.message)
+      alert('Erro: ' + error.message)
     } finally {
       setEnviandoEvo(false)
     }
   }
 
-  /** Salvar oferta */
   function handleSalvar(status: 'rascunho' | 'pronta' | 'enviada') {
     const oferta = adicionarOferta({
       produtoId: '',
@@ -231,592 +212,215 @@ export default function NewOffer() {
   const formValido = form.nomeProduto && form.precoPor
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center gap-3">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-[1400px] mx-auto pb-20 space-y-8"
+    >
+      {/* Header Premium */}
+      <div className="flex items-center gap-4">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)] transition-colors"
-          aria-label="Voltar"
+          className="p-3 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] transition-all"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-            Nova Oferta
+          <h1 className="text-3xl font-black text-[var(--color-text-primary)]">
+            Editor de <span className="text-[var(--color-accent)]">Ofertas</span>
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Preencha os dados e gere a copy perfeita
+          <p className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-widest">
+             Criação Expressa Torres Premium
           </p>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Formulário */}
-        <div className="space-y-5">
-          {/* Dados do produto */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 space-y-4">
-            <h3 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-[var(--color-accent)]" />
-              Dados do Produto
-            </h3>
+      <div className="grid lg:grid-cols-2 gap-8 items-start">
+        {/* Lado Esquerdo: Formulário */}
+        <div className="space-y-6">
+          <section className="p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/40 backdrop-blur-sm space-y-6">
+            <div className="flex items-center gap-3">
+               <div className="w-1.5 h-6 bg-[var(--color-accent)] rounded-full" />
+               <h3 className="text-lg font-black text-[var(--color-text-primary)]">DNA do Produto</h3>
+            </div>
 
-            <div className="space-y-3">
-              {/* Nome */}
-              <div>
-                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                  Nome do Produto *
-                </label>
-                <input
-                  type="text"
-                  value={form.nomeProduto}
-                  onChange={(e) => atualizarCampo('nomeProduto', e.target.value)}
-                  placeholder="Ex: SSD Kingston 480GB"
-                  className="
-                    w-full px-3 py-2.5 rounded-lg text-sm
-                    bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-                    text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]
-                    focus:outline-none focus:border-[var(--color-accent)]
-                    transition-all
-                  "
-                />
-              </div>
+            <div className="space-y-4">
+               <div>
+                  <label className="text-[10px] uppercase font-black text-[var(--color-text-muted)] mb-2 block tracking-widest">Identidade Visual</label>
+                  <input
+                    type="text"
+                    value={form.nomeProduto}
+                    onChange={(e) => atualizarCampo('nomeProduto', e.target.value)}
+                    placeholder="Nome do Produto"
+                    className="w-full px-4 py-3.5 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-sm font-bold focus:border-[var(--color-accent)] transition-all"
+                  />
+               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {/* SKU */}
-                <div>
-                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                    SKU (opcional)
-                  </label>
+               <div className="grid grid-cols-2 gap-4">
                   <input
                     type="text"
                     value={form.sku}
                     onChange={(e) => atualizarCampo('sku', e.target.value)}
-                    placeholder="SA400S37/480G"
-                    className="
-                      w-full px-3 py-2.5 rounded-lg text-sm
-                      bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-                      text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]
-                      focus:outline-none focus:border-[var(--color-accent)]
-                      transition-all
-                    "
+                    placeholder="SKU"
+                    className="w-full px-4 py-3.5 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-sm focus:border-[var(--color-accent)] transition-all"
                   />
-                </div>
-
-                {/* Imagem URL */}
-                <div>
-                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                    URL da Imagem
-                  </label>
                   <input
                     type="url"
                     value={form.imagem}
                     onChange={(e) => atualizarCampo('imagem', e.target.value)}
-                    placeholder="https://..."
-                    className="
-                      w-full px-3 py-2.5 rounded-lg text-sm
-                      bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-                      text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]
-                      focus:outline-none focus:border-[var(--color-accent)]
-                      transition-all
-                    "
+                    placeholder="URL da Imagem"
+                    className="w-full px-4 py-3.5 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-sm focus:border-[var(--color-accent)] transition-all"
                   />
-                </div>
-              </div>
+               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {/* Preço De */}
-                <div>
-                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                    Preço De (R$)
-                  </label>
-                  <input
-                    type="number"
-                    value={form.precoDe}
-                    onChange={(e) => atualizarCampo('precoDe', e.target.value)}
-                    placeholder="199.90"
-                    step="0.01"
-                    className="
-                      w-full px-3 py-2.5 rounded-lg text-sm
-                      bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-                      text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]
-                      focus:outline-none focus:border-[var(--color-accent)]
-                      transition-all
-                    "
-                  />
-                </div>
-
-                {/* Preço Por */}
-                <div>
-                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                    Preço Por (R$) *
-                  </label>
-                  <input
-                    type="number"
-                    value={form.precoPor}
-                    onChange={(e) => atualizarCampo('precoPor', e.target.value)}
-                    placeholder="149.90"
-                    step="0.01"
-                    className="
-                      w-full px-3 py-2.5 rounded-lg text-sm
-                      bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-                      text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]
-                      focus:outline-none focus:border-[var(--color-accent)]
-                      transition-all
-                    "
-                  />
-                </div>
-              </div>
-
-              {desconto > 0 && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-[var(--color-accent)] font-bold">
-                    {desconto}% de desconto
-                  </span>
-                  <span className="text-[var(--color-text-secondary)]">
-                    ({formatarPreco(precoDe)} → {formatarPreco(precoPor)})
-                  </span>
-                </div>
-              )}
-
-              {/* Link ML */}
-              <div>
-                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                  Link do Anúncio (Mercado Livre)
-                </label>
-                <input
-                  type="url"
-                  value={form.linkMercadoLivre}
-                  onChange={(e) => atualizarCampo('linkMercadoLivre', e.target.value)}
-                  placeholder="https://www.mercadolivre.com.br/..."
-                  className="
-                    w-full px-3 py-2.5 rounded-lg text-sm
-                    bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-                    text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]
-                    focus:outline-none focus:border-[var(--color-accent)]
-                    transition-all
-                  "
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* WhatsApp */}
-                <div>
-                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                    Número WhatsApp
-                  </label>
-                  <input
-                    type="tel"
-                    value={form.numeroWhatsApp}
-                    onChange={(e) => atualizarCampo('numeroWhatsApp', e.target.value)}
-                    placeholder="11999999999"
-                    className="
-                      w-full px-3 py-2.5 rounded-lg text-sm
-                      bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-                      text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]
-                      focus:outline-none focus:border-[var(--color-accent)]
-                      transition-all
-                    "
-                  />
-                </div>
-
-                {/* Link grupo */}
-                <div>
-                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                    Link do Grupo
-                  </label>
-                  <input
-                    type="url"
-                    value={form.linkGrupo}
-                    onChange={(e) => atualizarCampo('linkGrupo', e.target.value)}
-                    placeholder="https://chat.whatsapp.com/..."
-                    className="
-                      w-full px-3 py-2.5 rounded-lg text-sm
-                      bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-                      text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]
-                      focus:outline-none focus:border-[var(--color-accent)]
-                      transition-all
-                    "
-                  />
-                </div>
-              </div>
-
-              {/* Descrição */}
-              <div>
-                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                  Descrição / Benefício (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={form.descricao}
-                  onChange={(e) => atualizarCampo('descricao', e.target.value)}
-                  placeholder="Ex: Mais velocidade para seu PC"
-                  className="
-                    w-full px-3 py-2.5 rounded-lg text-sm
-                    bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-                    text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]
-                    focus:outline-none focus:border-[var(--color-accent)]
-                    transition-all
-                  "
-                />
-              </div>
-
-              {/* Urgência */}
-              <div>
-                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                  Urgência / Escassez (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={form.urgencia}
-                  onChange={(e) => atualizarCampo('urgencia', e.target.value)}
-                  placeholder="Ex: Últimas 5 unidades!"
-                  className="
-                    w-full px-3 py-2.5 rounded-lg text-sm
-                    bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-                    text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)]
-                    focus:outline-none focus:border-[var(--color-accent)]
-                    transition-all
-                  "
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Gerador de copy */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 space-y-4">
-            <h3 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />
-              Gerador de Copy
-            </h3>
-
-            {/* Estilos */}
-            <div className="grid grid-cols-3 gap-2">
-              {estilosCopy.map((e) => {
-                const Icone = e.icone
-                return (
-                  <button
-                    key={e.valor}
-                    onClick={() => setEstilo(e.valor)}
-                    className={`
-                      p-3 rounded-lg border text-center transition-all
-                      ${
-                        estilo === e.valor
-                          ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)]'
-                          : 'border-[var(--color-border)] hover:border-[var(--color-border-light)] hover:bg-[var(--color-surface-hover)]'
-                      }
-                    `}
-                  >
-                    <Icone
-                      className={`w-5 h-5 mx-auto mb-1 ${
-                        estilo === e.valor ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-secondary)]'
-                      }`}
+               <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] ml-1">Preço Original (De)</label>
+                    <input
+                      type="number"
+                      value={form.precoDe}
+                      onChange={(e) => atualizarCampo('precoDe', e.target.value)}
+                      placeholder="0.00"
+                      className="w-full px-4 py-3.5 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-sm font-bold focus:border-[var(--color-accent)]"
                     />
-                    <span className={`block text-xs font-semibold ${
-                      estilo === e.valor ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-primary)]'
-                    }`}>
-                      {e.label}
-                    </span>
-                    <span className="block text-[10px] text-[var(--color-text-secondary)] mt-0.5">
-                      {e.descricao}
-                    </span>
-                  </button>
-                )
-              })}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-[var(--color-accent)] ml-1">Preço Oferta (Por)</label>
+                    <input
+                      type="number"
+                      value={form.precoPor}
+                      onChange={(e) => atualizarCampo('precoPor', e.target.value)}
+                      placeholder="0.00"
+                      className="w-full px-4 py-3.5 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-accent)] text-sm font-black text-[var(--color-accent)]"
+                    />
+                  </div>
+               </div>
             </div>
+          </section>
 
-            {/* Botões de geração */}
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={handleGerarCopy}
-                disabled={!formValido}
-                className="
-                  flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold
-                  bg-[var(--color-accent)] text-[var(--color-text-inverse)]
-                  hover:bg-[var(--color-accent-light)]
-                  disabled:opacity-40 transition-all
-                "
-              >
-                <Wand2 className="w-4 h-4" />
-                Gerar Copy
-              </button>
-              <button
-                onClick={handleGerarTresVersoes}
-                disabled={!formValido}
-                className="
-                  flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold
-                  border border-[var(--color-accent)] text-[var(--color-accent)]
-                  hover:bg-[var(--color-accent-soft)]
-                  disabled:opacity-40 transition-all
-                "
-              >
-                <Sparkles className="w-4 h-4" />
-                Gerar 3 Versões
-              </button>
-              {copyGerada && (
-                <>
-                  <button
-                    onClick={() => setCopyGerada(encurtarCopy(copyGerada))}
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-all"
-                  >
-                    <Minimize2 className="w-3.5 h-3.5" />
-                    Encurtar
-                  </button>
-                  <button
-                    onClick={() => setCopyGerada(maisVendedor(copyGerada))}
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-all"
-                  >
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    + Vendedor
-                  </button>
-                  <button
-                    onClick={() => setCopyGerada(maisPremium(copyGerada))}
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-all"
-                  >
-                    <Crown className="w-3.5 h-3.5" />
-                    + Premium
-                  </button>
-                  <button
-                    onClick={handleGerarCopy}
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-all"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Novo
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* 3 versões tabs */}
-            {tresVersoes && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-[var(--color-text-secondary)]">
-                  Selecione uma versão:
-                </p>
-                <div className="grid grid-cols-3 gap-2">
+          {/* IA Copy Engine */}
+          <section className="p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] space-y-6">
+            <div className="flex items-center justify-between">
+               <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-6 bg-[var(--color-accent)] rounded-full" />
+                  <h3 className="text-lg font-black text-[var(--color-text-primary)]">IA Copywriter</h3>
+               </div>
+               <div className="flex gap-1">
                   {estilosCopy.map((e) => (
-                    <button
+                    <button 
                       key={e.valor}
-                      onClick={() => {
-                        setEstilo(e.valor)
-                        setCopyGerada(tresVersoes[e.valor])
-                      }}
-                      className={`
-                        p-2 rounded-lg text-xs text-center border transition-all
-                        ${
-                          estilo === e.valor
-                            ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)] font-semibold'
-                            : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
-                        }
-                      `}
+                      onClick={() => setEstilo(e.valor)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all ${estilo === e.valor ? 'bg-[var(--color-accent)] text-black' : 'bg-[var(--color-bg-primary)] text-[var(--color-text-muted)]'}`}
                     >
                       {e.label}
                     </button>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* Copy gerada (editável) */}
-            {copyGerada && (
-              <div>
-                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                  Copy gerada (editável):
-                </label>
-                <textarea
-                  value={copyGerada}
-                  onChange={(e) => setCopyGerada(e.target.value)}
-                  rows={10}
-                  className="
-                    w-full px-3 py-2.5 rounded-lg text-sm leading-relaxed
-                    bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-                    text-[var(--color-text-primary)]
-                    focus:outline-none focus:border-[var(--color-accent)]
-                    transition-all resize-y font-mono
-                  "
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Preview e ações */}
-        <div className="space-y-5">
-          {/* Preview */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 space-y-4 sticky top-20">
-            <h3 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-              <Eye className="w-4 h-4 text-[var(--color-accent)]" />
-              Preview da Oferta
-            </h3>
-
-            {/* Card preview */}
-            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] overflow-hidden">
-              {/* Imagem */}
-              {form.imagem && (
-                <div className="aspect-video bg-[var(--color-bg-primary)]">
-                  <img
-                    src={form.imagem}
-                    alt={form.nomeProduto}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-
-              <div className="p-4 space-y-3">
-                <h4 className="text-base font-bold text-[var(--color-text-primary)]">
-                  {form.nomeProduto || 'Nome do produto'}
-                </h4>
-
-                <div className="flex items-baseline gap-3">
-                  {precoDe > 0 && precoDe !== precoPor && (
-                    <span className="price-old text-base">
-                      {formatarPreco(precoDe)}
-                    </span>
-                  )}
-                  <span className="price-new text-2xl">
-                    {precoPor > 0 ? formatarPreco(precoPor) : 'R$ —'}
-                  </span>
-                  {desconto > 0 && (
-                    <span className="badge badge--active text-xs">
-                      -{desconto}%
-                    </span>
-                  )}
-                </div>
-
-                {form.sku && (
-                  <p className="text-xs text-[var(--color-text-secondary)]">
-                    SKU: {form.sku}
-                  </p>
-                )}
-
-                {/* Copy preview como mensagem WhatsApp */}
-                {copyGerada && (
-                  <div className="
-                    p-3 rounded-lg
-                    bg-[#005c4b]/30 border border-[#005c4b]/50
-                    text-sm text-[var(--color-text-primary)]
-                    whitespace-pre-wrap leading-relaxed
-                  ">
-                    {copyGerada}
-                  </div>
-                )}
-
-                {/* Botão comprar */}
-                {form.linkMercadoLivre && (
-                  <a
-                    href={form.linkMercadoLivre}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="
-                      flex items-center justify-center gap-2 w-full py-3 rounded-lg
-                      bg-[#ffe600] text-[#333] font-bold text-sm
-                      hover:bg-[#ffd000] transition-all
-                    "
-                  >
-                    Comprar no Mercado Livre
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                )}
-              </div>
+               </div>
             </div>
 
-            {/* Botões de ação */}
+            <div className="flex flex-wrap gap-3">
+               <button
+                  onClick={handleGerarCopy}
+                  disabled={!formValido}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-[var(--color-gradient-gold)] text-black font-black text-sm shadow-xl hover:scale-[1.02] active:scale-95 disabled:opacity-30 transition-all"
+               >
+                  <Wand2 className="w-5 h-5" />
+                  Gerar Copy Perfeita
+               </button>
+               <button
+                  onClick={handleGerarTresVersoes}
+                  disabled={!formValido}
+                  className="px-6 py-4 rounded-xl border-2 border-[var(--color-accent)] text-[var(--color-accent)] font-black text-sm hover:bg-[var(--color-accent-soft)] transition-all"
+               >
+                  Testar Variantes
+               </button>
+            </div>
+
             {copyGerada && (
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={handleCopiar}
-                  className={`
-                    flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold
-                    border transition-all
-                    ${
-                      copiado
-                        ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
-                        : 'border-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]'
-                    }
-                  `}
-                >
-                  {copiado ? (
-                    <>
-                      <CheckCircle className="w-4 h-4" />
-                      Copiado!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4" />
-                      Copiar
-                    </>
-                  )}
-                </button>
-
-                <button
-                  onClick={handleAbrirWhatsApp}
-                  className="
-                    flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold
-                    bg-[var(--color-whatsapp)] text-white
-                    hover:brightness-110 transition-all
-                  "
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  WhatsApp
-                </button>
-
-                <button
-                  onClick={handleEnviarEvo}
-                  disabled={enviandoEvo}
-                  className="
-                    flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold
-                    bg-[var(--color-accent)] text-white
-                    hover:brightness-110 transition-all disabled:opacity-50
-                    col-span-2
-                  "
-                >
-                  {enviandoEvo ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                  Enviar para Grupo (Automático)
-                </button>
-
-                <button
-                  onClick={() => handleSalvar('rascunho')}
-                  className="
-                    flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm
-                    border border-[var(--color-border)] text-[var(--color-text-secondary)]
-                    hover:bg-[var(--color-surface-hover)] transition-all
-                  "
-                >
-                  <Save className="w-4 h-4" />
-                  Rascunho
-                </button>
-
-                <button
-                  onClick={() => handleSalvar('enviada')}
-                  className={`
-                    flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold
-                    transition-all
-                    ${
-                      salvo
-                        ? 'bg-[var(--color-accent)] text-[var(--color-text-inverse)]'
-                        : 'bg-[var(--color-accent)] text-[var(--color-text-inverse)] hover:bg-[var(--color-accent-light)]'
-                    }
-                  `}
-                >
-                  {salvo ? (
-                    <>
-                      <CheckCircle className="w-4 h-4" />
-                      Salvo!
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Enviar e Salvar
-                    </>
-                  )}
-                </button>
-              </div>
+               <motion.div 
+                 initial={{ opacity: 0, height: 0 }}
+                 animate={{ opacity: 1, height: 'auto' }}
+                 className="space-y-4 pt-4 border-t border-[var(--color-border)]"
+               >
+                  <textarea
+                    value={copyGerada}
+                    onChange={(e) => setCopyGerada(e.target.value)}
+                    rows={8}
+                    className="w-full px-4 py-4 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-sm leading-relaxed font-mono focus:border-[var(--color-accent)]"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                     <button onClick={() => setCopyGerada(encurtarCopy(copyGerada))} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--color-surface)] text-[10px] font-bold text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] transition-colors"><Minimize2 className="w-3 h-3"/> Compactar</button>
+                     <button onClick={() => setCopyGerada(maisVendedor(copyGerada))} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--color-surface)] text-[10px] font-bold text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] transition-colors"><Flame className="w-3 h-3"/> + Conversão</button>
+                     <button onClick={() => setCopyGerada(maisPremium(copyGerada))} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--color-surface)] text-[10px] font-bold text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] transition-colors"><Crown className="w-3 h-3"/> + Premium</button>
+                  </div>
+               </motion.div>
             )}
-          </div>
+          </section>
+        </div>
+
+        {/* Lado Direito: Preview Mobile Realtime */}
+        <div className="sticky top-24 space-y-6">
+           <div className="relative mx-auto w-full max-w-[340px] aspect-[9/18.5] bg-black rounded-[3rem] border-[8px] border-[#1a1a1a] shadow-2xl overflow-hidden">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#1a1a1a] rounded-b-2xl z-20" />
+              
+              <div className="h-full w-full bg-[var(--color-bg-primary)] overflow-y-auto custom-scrollbar pt-8">
+                 {form.imagem && (
+                   <div className="relative aspect-square">
+                      <img src={form.imagem} className="w-full h-full object-cover" />
+                      <div className="absolute top-4 right-4 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-full shadow-lg">⚡ OFERTA LIMITADA</div>
+                   </div>
+                 )}
+                 
+                 <div className="p-5 space-y-4">
+                    <h2 className="text-lg font-black text-white leading-tight">{form.nomeProduto || 'Título da Oferta'}</h2>
+                    
+                    <div className="flex items-baseline gap-2">
+                       {precoDe > 0 && precoDe !== precoPor && <span className="text-xs line-through text-gray-500">{formatarPreco(precoDe)}</span>}
+                       <span className="text-2xl font-black text-[var(--color-accent)]">{formatarPreco(precoPor)}</span>
+                    </div>
+
+                    {copyGerada && (
+                       <div className="p-3 bg-[#075e54]/20 border-l-4 border-[#25d366] text-[11px] text-gray-200 whitespace-pre-wrap leading-relaxed rounded-r-lg font-mono">
+                          {copyGerada}
+                       </div>
+                    )}
+                 </div>
+              </div>
+
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[85%] z-20">
+                 <button className="w-full py-3.5 bg-[#25d366] text-white rounded-2xl font-black text-xs shadow-2xl flex items-center justify-center gap-2">
+                    <MessageSquare className="w-4 h-4 fill-white" />
+                    EU QUERO AGORA
+                 </button>
+              </div>
+           </div>
+
+           <div className="grid grid-cols-2 gap-3 max-w-[340px] mx-auto">
+              <button 
+                onClick={handleCopiar} 
+                className={`flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs border-2 transition-all ${copiado ? 'border-[var(--color-accent)] text-[var(--color-accent)]' : 'border-[var(--color-border)] text-white'}`}
+              >
+                {copiado ? <CheckCircle className="w-4 h-4"/> : <Copy className="w-4 h-4"/>}
+                {copiado ? 'COPIADO' : 'COPIAR TEXTO'}
+              </button>
+              <button onClick={handleAbrirWhatsApp} className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-[#075e54] text-white font-black text-xs">
+                 <MessageSquare className="w-4 h-4"/>
+                 WPP MANUAL
+              </button>
+              <button 
+                onClick={handleEnviarEvo}
+                disabled={enviandoEvo || !copyGerada}
+                className="col-span-2 py-5 rounded-2xl bg-[var(--color-accent)] text-black font-black text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)] hover:scale-[1.02] active:scale-95 disabled:opacity-30 transition-all flex items-center justify-center gap-3"
+              >
+                 {enviandoEvo ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 fill-black" />}
+                 DISPARAR NO GRUPO PRO
+              </button>
+              <button onClick={() => handleSalvar('rascunho')} className="col-span-2 py-4 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] font-bold text-xs uppercase tracking-widest hover:text-white transition-colors">
+                 Salvar Rascunho na Biblioteca
+              </button>
+           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
-
-
