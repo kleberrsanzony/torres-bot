@@ -107,21 +107,22 @@ export async function buscarInfoVendedor(accessToken: string): Promise<any> {
   return response.json()
 }
 /**
- * Busca os 20 melhores "Deals" do dia (Mais Vendidos + Frete Grátis)
+ * Busca os 20 melhores "Destaques" (Highlights) do dia
  */
 export async function fetchTop20Deals(
   _accessToken?: string,
-  category = 'eletronicos'
+  category = 'MLB-ELETRONICOS'
 ): Promise<ProdutoML[]> {
-  // Chamada pública via Proxy
-  const query = category === 'eletronicos' ? 'tecnologia' : category
-  const path = `/sites/MLB/search?q=${encodeURIComponent(query)}&limit=20`
+  // O endpoint de Highlights é focado em ofertas populares e costuma ter menos bloqueios que a busca comum
+  // Formato: /highlights/{SITE_ID}/category/{CATEGORY_ID} ou apenas destaques gerais
+  const path = `/highlights/MLB`
   const response = await fetch(`/api/ml-proxy?path=${encodeURIComponent(path)}`)
 
-  if (!response.ok) throw new Error('Erro ao buscar ofertas do dia')
+  if (!response.ok) throw new Error('Erro ao buscar destaques do dia')
   const data = await response.json()
   
-  return (data.results || []).map((item: any) => ({
+  // O formato de retorno do highlights é ligeiramente diferente (results[].content)
+  return (data.results || []).slice(0, 20).map((item: any) => ({
     id: item.id,
     titulo: item.title,
     preco: item.original_price || item.price,
