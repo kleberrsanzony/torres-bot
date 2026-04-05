@@ -107,14 +107,16 @@ export async function buscarInfoVendedor(accessToken: string): Promise<any> {
   return response.json()
 }
 /**
- * Busca os 20 melhores "Deals" do dia (Descontos + Frete Grátis)
+ * Busca os 20 melhores "Deals" do dia (Mais Vendidos + Frete Grátis)
  */
 export async function fetchTop20Deals(
-  accessToken: string,
+  _accessToken?: string,
   category = 'eletronicos'
 ): Promise<ProdutoML[]> {
-  const path = `/sites/MLB/search?q=${encodeURIComponent(category)}&special_promotion=all&limit=20&shipping_cost=free`
-  const response = await fetch(`/api/ml-proxy?path=${encodeURIComponent(path)}&token=${accessToken}`)
+  // Chamada pública para o Mercado Livre via Proxy (Sem Token para evitar 403 se o app for restrito)
+  // Utilizamos filters para garantir relevância
+  const path = `/sites/MLB/search?q=${encodeURIComponent(category)}&sort=relevance&limit=20&shipping_cost=free&status=active`
+  const response = await fetch(`/api/ml-proxy?path=${encodeURIComponent(path)}`)
 
   if (!response.ok) throw new Error('Erro ao buscar ofertas do dia')
   const data = await response.json()

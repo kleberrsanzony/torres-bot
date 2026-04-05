@@ -7,17 +7,23 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { path, token } = req.query
 
-  if (!path || !token) {
-    return res.status(400).json({ message: 'Caminho ou token ausentes' })
+  if (!path) {
+    return res.status(400).json({ message: 'Caminho ausente' })
   }
 
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'TorresBot/1.0 (https://torres-bot.vercel.app)'
+    }
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
     const response = await fetch(`https://api.mercadolibre.com${path}`, {
       method: req.method || 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
+      headers,
       // Passa o body se for POST ou PUT
       body: ['POST', 'PUT'].includes(req.method!) ? JSON.stringify(req.body) : undefined
     })
