@@ -1,9 +1,8 @@
 /**
- * Serviço de Integração Real com Mercado Livre
- * Gerencia OAuth e busca de produtos reais.
+ * Serviço de Integração Real com Mercado Livre (Via Vercel Functions Proxy)
+ * Gerencia OAuth e busca de produtos reais, contornando erros de CORS.
  */
 
-const ML_API_BASE = 'https://api.mercadolibre.com'
 const ML_AUTH_URL = 'https://auth.mercadolivre.com.br/authorization'
 
 interface MLAuthConfig {
@@ -31,21 +30,20 @@ export function iniciarAutenticacaoML(config: MLAuthConfig): void {
 }
 
 /**
- * Troca o código de autorização por token de acesso
+ * Troca o código de autorização por token de acesso (Via Backend /api/ml-auth)
  */
 export async function trocarCodigoPorToken(
   code: string,
   config: MLAuthConfig
 ): Promise<any> {
-  const response = await fetch(`${ML_API_BASE}/oauth/token`, {
+  const response = await fetch('/api/ml-auth', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       code,
-      redirect_uri: config.redirectUri,
+      clientId: config.clientId,
+      clientSecret: config.clientSecret,
+      redirectUri: config.redirectUri,
     }),
   })
 
@@ -58,29 +56,7 @@ export async function trocarCodigoPorToken(
 }
 
 /**
- * Renova o token de acesso
- */
-export async function renovarToken(
-  refreshToken: string,
-  config: MLAuthConfig
-): Promise<any> {
-  const response = await fetch(`${ML_API_BASE}/oauth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
-      refresh_token: refreshToken,
-    }),
-  })
-
-  if (!response.ok) throw new Error('Erro ao renovar token')
-  return response.json()
-}
-
-/**
- * Busca IDs dos produtos do vendedor
+ * Busca IDs dos produtos do vendedor (Via Backend /api/ml-proxy)
  */
 export async function buscarIdsProdutos(
   sellerId: string,
@@ -88,12 +64,8 @@ export async function buscarIdsProdutos(
   offset = 0,
   limit = 50
 ): Promise<{ ids: string[]; total: number }> {
-  const response = await fetch(
-    `${ML_API_BASE}/users/${sellerId}/items/search?offset=${offset}&limit=${limit}`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }
-  )
+  const path = `/users/${sellerId}/items/search?offset=${offset}&limit=${limit}`
+  const response = await fetch(`/api/ml-proxy?path=${encodeURIComponent(path)}&token=${accessToken}`)
 
   if (!response.ok) throw new Error('Erro ao buscar IDs de produtos')
   const data = await response.json()
@@ -104,7 +76,7 @@ export async function buscarIdsProdutos(
 }
 
 /**
- * Busca detalhes de múltiplos produtos (Multi-Get)
+ * Busca detalhes de múltiplos produtos (Via Backend /api/ml-proxy)
  */
 export async function buscarDetalhesProdutos(
   ids: string[],
@@ -112,29 +84,23 @@ export async function buscarDetalhesProdutos(
 ): Promise<any[]> {
   if (ids.length === 0) return []
 
-  const response = await fetch(
-    `${ML_API_BASE}/items?ids=${ids.join(',')}`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }
-  )
+  const path = `/items?ids=${ids.join(',')}`
+  const response = await fetch(`/api/ml-proxy?path=${encodeURIComponent(path)}&token=${accessToken}`)
 
   if (!response.ok) throw new Error('Erro ao buscar detalhes dos produtos')
   const results = await response.json()
   
-  // O ML retorna um array de objetos { code, body }
   return results
     .filter((r: any) => r.code === 200)
     .map((r: any) => r.body)
 }
 
 /**
- * Busca informações do vendedor (Me)
+ * Busca informações do vendedor (Via Backend /api/ml-proxy)
  */
 export async function buscarInfoVendedor(accessToken: string): Promise<any> {
-  const response = await fetch(`${ML_API_BASE}/users/me`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
+  const path = '/users/me'
+  const response = await fetch(`/api/ml-proxy?path=${encodeURIComponent(path)}&token=${accessToken}`)
 
   if (!response.ok) throw new Error('Erro ao buscar info do vendedor')
   return response.json()
