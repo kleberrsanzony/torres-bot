@@ -31,7 +31,7 @@ export default function OfferFactory() {
   const [indiceAtivo, setIndiceAtivo] = useState<number | null>(null)
   const [emExecucao, setEmExecucao] = useState(false)
   const [segundosRestantes, setSegundosRestantes] = useState(0)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const timerRef = useRef<any>(null)
 
   const intervaloSegundos = (settings.intervaloPostagem || 30) * 60
 
@@ -91,38 +91,19 @@ export default function OfferFactory() {
     const mensagem = `🔥 *OFERTA RELÂMPAGO DO DIA!* 🔥\n\n*${produto.titulo}*\n\n💰 De: ~R$ ${produto.preco.toFixed(2)}~\n🚀 *POR APENAS: R$ ${produto.precoPromocional?.toFixed(2)}*\n\n✅ FRETE GRÁTIS ATIVO!\n⚠️ Link com estoque limitado!\n\n🛒 *COMPRE AQUI:* ${linkAfiliado}\n\n#mercadoLivre #oferta #afiliado`
 
     try {
-      await enviarMensagemOferta(
-        settings.evoUrl || '',
-        settings.evoApiKey || '',
-        settings.evoInstanceName || '',
-        settings.evoGroupJid || '',
-        {
-          id: produto.id,
-          nomeProduto: produto.titulo,
-          sku: produto.sku,
-          precoDe: produto.preco,
-          precoPor: produto.precoPromocional || produto.preco,
-          linkMercadoLivre: linkAfiliado,
-          numeroWhatsApp: settings.numeroWhatsApp,
-          linkGrupo: settings.linkGrupo,
-          descricao: '',
-          urgencia: 'Alta',
-          imagem: produto.imagemPrincipal,
-          copyGerada: mensagem,
-          estiloCopy: 'vendedor' as EstiloCopy,
-          status: 'enviada',
-          favorita: false,
-          dataCriacao: new Date().toISOString(),
-          dataAtualizacao: new Date().toISOString()
-        }
-      )
+      await enviarMensagemOferta({
+        url: settings.evoUrl || '',
+        apiKey: settings.evoApiKey || '',
+        instanceName: settings.evoInstanceName || '',
+        remoteJid: settings.evoGroupJid || '',
+        mediaUrl: produto.imagemPrincipal,
+        caption: mensagem
+      })
       
       registrarNoHistorico({
-        id: crypto.randomUUID(),
         ofertaId: produto.id,
         produtoNome: produto.titulo,
         copyUsada: mensagem,
-        data: new Date().toISOString(),
         acao: 'enviada'
       })
 
